@@ -86,6 +86,16 @@ python tools/distill.py --corpus corpus --retry-json distill_progress.json
 
 **Copyright (C) 2026 jerrypps3-glitch — GNU AGPL-3.0-or-later**（与同作者的开源缠论引擎同款协议）
 
+引擎内嵌三层来源标记（源码声明 / `verify_origin()` 完整性锚 / 输出 JSON 的 `meta._src` 字段）——**提取出的认知数据流通到哪，来源跟到哪**：
+
+```python
+>>> from tools.distill import verify_origin
+>>> verify_origin()["ok"]
+True
+```
+
+移除标记需要故意改动源码——那本身就是侵权证据。
+
 自由使用、修改、分发；衍生作品（含网络服务化）需以 AGPL-3.0 开源。此项目没有商业目的，只希望它被取用、被完善。
 
 拆解永远比囤积有价值——把东西拉下来拆零碎了，比收藏一百个仓库都强。
