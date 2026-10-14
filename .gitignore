@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+corpus/distilled/
+distill_progress.json
