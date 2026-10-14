@@ -2,6 +2,13 @@
 # -*- coding: utf-8 -*-
 """认知蒸馏器 — 从非结构化文本提取结构化认知条目（信念/价值/规则/洞察）。
 
+Copyright (C) 2026 jerrypps3-glitch <https://github.com/jerrypps3-glitch/cognitive-distiller>
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+本文件以 GNU AGPL-3.0(或更新版本)发布: 自由使用/修改/再分发,
+但任何衍生作品(含网络服务化)必须以同一许可证开源, 并保留本声明与内嵌来源标记。
+被移除本声明与本文件内嵌水印的副本 = 故意侵权证据。
+
 设计要义（来自实战教训, 见 METHODOLOGY.md）:
   · 脚本优于提示词 —— 原始文本 → 切块 → 逐块调用 LLM → 结构化 JSON → 本地知识库
   · evidence 引用强制 —— 每条必须附原文真实片段, 不许编造（防幻觉的结构化约束）
@@ -32,6 +39,30 @@ CHUNK_SIZE = 2500
 SLEEP = 3
 CATEGORIES = ["beliefs", "values", "rules", "insights"]  # 框架可改(与提示词保持一致)
 
+# ════════════════════════════════════════════════════════════
+# 出品水印/来源标记 (三层防护) — 详见 README「来源与许可证」
+# 身份存在于每个输出 JSON 的 meta._src 字段: 数据流通到哪, 来源跟到哪
+# ════════════════════════════════════════════════════════════
+__origin__ = {
+    "author": "jerrypps3-glitch",
+    "project": "cognitive-distiller",
+    "url": "https://github.com/jerrypps3-glitch/cognitive-distiller",
+    "tool": "cognitive-distiller",
+    "license": "AGPL-3.0-or-later",
+    "version": "1.0.0",
+}
+WATERMARK_CHECK = "287007c16d81b98e"  # __origin__+核心函数签名指纹; 删水印式改动会使它失配
+
+
+def verify_origin():
+    """验证来源标记完整性。返回 {"ok": bool, "checksum", "expected", "origin"}。"""
+    import hashlib
+    probe = {"origin": __origin__,
+             "fns": ["split_chunks", "parse_json", "extract_chunk", "_atomic_dump"]}
+    fp = hashlib.sha256(repr(probe).replace("'", '"').encode("utf-8")).hexdigest()
+    return {"ok": fp[:16] == WATERMARK_CHECK, "checksum": fp[:16],
+            "expected": WATERMARK_CHECK, "origin": dict(__origin__)}
+
 from llm_client import chat as route_chat
 
 _FORCE_MODEL = ""
@@ -55,6 +86,12 @@ def _load_default_prompt():
 
 
 SYSTEM_PROMPT = _load_default_prompt()
+
+
+def _src_tag():
+    """输出数据内嵌来源标记 — 数据流通到哪, 身份跟到哪 (三层防护第③层)。"""
+    return {"tool": __origin__["tool"], "by": __origin__["author"],
+            "repo": __origin__["project"], "v": __origin__["version"]}
 
 
 def _atomic_dump(path, obj):
@@ -212,7 +249,8 @@ def _main(system_prompt, limit):
                 _atomic_dump(os.path.join(BVRIDIR, k + ".json"),
                              {"meta": {"source": _arg("source", CORPUS),
                                        "updated": time.strftime("%Y-%m-%d"),
-                                       "count": len(accum[k])},
+                                       "count": len(accum[k]),
+                                       "_src": _src_tag()},
                               "items": accum[k]})
             prog.setdefault("partial", {})[fpath] = ci + 1
             for k in CATEGORIES:
